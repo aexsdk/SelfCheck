@@ -1,0 +1,47 @@
+apply plugin: 'com.android.application'
+
+android {
+    compileSdkVersion 22
+    buildToolsVersion "26.0.1"
+
+    defaultConfig {
+        applicationId "com.hthx.tpse01.selfcheck"
+        minSdkVersion 19
+        targetSdkVersion 22
+        ndk {
+            moduleName "appSerialLibs"
+            ldLibs "log", "z", "m"
+            cFlags "-fuse-ld=bfd"
+            abiFilters "armeabi", "armeabi-v7a", "x86"
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.txt'
+        }
+    }
+    sourceSets { main { jni.srcDirs = ['src/main/jni'] } }
+    /** 导入so文件 */
+    task nativeLibsToJar(type: Zip, description: "create a jar archive of the native libs") {
+        destinationDir file("$projectDir/libs")
+        baseName "jniaexlib"
+        extension "jar"
+        from fileTree(dir: "src/main/jniLibs", include: "**/*.so")
+        into "lib"
+    }
+    tasks.withType(JavaCompile) {
+        compileTask -> compileTask.dependsOn(nativeLibsToJar)
+    }
+    repositories {
+        flatDir {
+            dirs 'libs'
+        }
+    }
+}
+
+dependencies {
+    compile fileTree(include: ['*.jar'], dir: 'libs')
+    compile 'com.android.support:support-v4:18.0.0'
+}
