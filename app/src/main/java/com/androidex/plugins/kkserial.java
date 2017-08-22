@@ -60,11 +60,11 @@ public class kkserial {
 
     public void OnDataReciveEvent(int fd, byte[] data,int len) {
         //收到数据的事件
-        android.util.Log.i(TAG, String.format("OnLogEvent: fd=%d,msg=%s\n",fd,byteToString(data)));
-        /*if ((ctx != null) && (ctx instanceof OnCallback)) {
+        //android.util.Log.i(TAG, String.format("OnLogEvent: fd=%d,msg=%s\n",fd,byteToString(data)));
+        if ((ctx != null) && (ctx instanceof OnCallback)) {
             OnCallback listener = (OnCallback) ctx;
             listener.onDataRecive(fd, data,len);
-        }*/
+        }
     }
 
    /**

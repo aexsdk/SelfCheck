@@ -115,7 +115,7 @@ int kkserial_readloop(HKKP env,HKKP obj,int fd,int len,int usec)
 		FD_CLR(fd,&rfds);
 		FD_ZERO(&rfds);
 		FD_SET(fd, &rfds);
-        kkserial_event(env,obj,fd,"Start select ...");
+        //kkserial_event(env,obj,fd,"Start select ...");
 		if(usec == -1){
 			iret = select(fd + 1, &rfds, NULL, NULL, NULL);
 		}else{

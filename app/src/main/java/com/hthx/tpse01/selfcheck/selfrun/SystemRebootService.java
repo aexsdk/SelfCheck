@@ -15,6 +15,8 @@ import java.util.TimeZone;
 
 import com.androidex.plugins.OnCallback;
 import com.androidex.plugins.kkserial;
+import com.app.dataprase.DataBaseInterface;
+import com.app.dataprase.GGAData;
 import com.app.dataprase.RMCData;
 import com.app.dataprase.pyDataComFromJni;
 
@@ -22,6 +24,7 @@ import com.hthx.tpse01.selfcheck.hardware.HardwareCheck;
 import com.hthx.tpse01.selfcheck.serialport.model.ConstModel;
 
 import android.app.AlarmManager;
+import android.app.PendingIntent;
 import android.app.Service;
 import android.content.ActivityNotFoundException;
 import android.content.BroadcastReceiver;
@@ -31,6 +34,8 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.os.IBinder;
 import android.util.Log;
+
+import static android.app.AlarmManager.ELAPSED_REALTIME_WAKEUP;
 
 public class SystemRebootService extends Service implements pyDataComFromJni,OnCallback {
 
@@ -63,15 +68,17 @@ public class SystemRebootService extends Service implements pyDataComFromJni,OnC
 		if(!new File("StoreLocalTime.txt").exists()){
 			writeFile("2017-08-25 14:10:18");
 		}
-		/*
+
 		AlarmManager am = (AlarmManager) getApplicationContext().getSystemService(Context.ALARM_SERVICE);
-        am.set(4, System.currentTimeMillis() + 480000,   //从现在起30s
+        am.set(ELAPSED_REALTIME_WAKEUP, System.currentTimeMillis() + 480000,   //从现在起30s
                 PendingIntent.getBroadcast(getApplicationContext(), 100, new Intent(actionRunReboot), PendingIntent.FLAG_UPDATE_CURRENT));
-        */
+
 		/////////////////////////////////////////////////////////初始化协议数据解析模块(jni模块)
 		mReceiver = new NotifyReceiver();
 		IntentFilter filter = new IntentFilter();
 		filter.addAction(bdSerialReciveData);
+		filter.addAction(bdSerialReciveLog);
+		filter.addAction(actionRunReboot);
 		registerReceiver(mReceiver, filter);
 
 		/////////////////////////////////////////////////////////检测TF卡状态、获取系统信息
@@ -258,7 +265,7 @@ public class SystemRebootService extends Service implements pyDataComFromJni,OnC
 		mGnssFd = serial.serial_open(mBDPort);
 		if(mGnssFd > 0) {
 			serial.serial_readloop(mGnssFd,100,-1);
-			//run28app("com.androidex.apps.aexserial", "com.androidex.apps.aexserial.MainActivity");
+			run28app("com.androidex.apps.aexserial", "com.androidex.apps.aexserial.MainActivity");
 		}
 
 		return START_STICKY;
@@ -276,27 +283,21 @@ public class SystemRebootService extends Service implements pyDataComFromJni,OnC
 	@Override
 	public int CallBackFunction(int iType, Object obj) {
 		// TODO Auto-generated method stub
+		String oneTag = "Unkown\n";	//单个协议包
 		switch (iType) {
-
 		case com.app.dataprase.DataBaseInterface.TYPE_RMC: 
 		{
-			
 			ConstModel.bGNSSData = true;
-			
 			if(ConstModel.LOGDEBUG){
 				Log.i(ConstModel.TAG, "SystemSelfCheck_TAG_in the java_rmc");
 			}
-			
 			RMCData data = (RMCData) obj;
-			
+			oneTag = data.toString();
 			if(data.iDate != 0 && data.dUtcTime != 0.0){                         //若协议中无数据，那么就不处理
-				
 				String strDate = "";               //日期字符串
-				
 				String strUTCTime = "";            //时间字符串
 				String strUTCTimeInteger = "";            //时间字符串整数部分
 				String strUTCTimeDecimal = "";            //时间字符串小数部分
-				
 				String year = "17";                  //年          eg:2017
 				String month = "08";                 //月          eg:07
 				String day = "08";                   //日          eg:31
@@ -307,47 +308,44 @@ public class SystemRebootService extends Service implements pyDataComFromJni,OnC
 				
 				strDate = String.format("%06d", data.iDate);
 				strUTCTime = String.format("%f", data.dUtcTime);
-				
 				String [] temStr = strUTCTime.split("\\.");
-			
 				strUTCTimeDecimal = temStr[1];
-				
 				strUTCTimeInteger = String.format("%06d", Integer.parseInt(temStr[0]));
-				
 				day = strDate.substring(0, 2);
 				month = strDate.substring(2, 4);
 				year = strDate.substring(4, 6);
 				hour = strUTCTimeInteger.substring(0, 2);
 				minute = strUTCTimeInteger.substring(2, 4);
 				second = strUTCTimeInteger.substring(4, 6);
-				millisecond = strUTCTimeDecimal;	
-				
+				millisecond = strUTCTimeDecimal;
 				//ConstModel.sGNSSTime = String.format("20%s-%s-%s %s:%s:%s.%s", year, month, day,hour, minute, second, millisecond);
 				ConstModel.sGNSSTime = String.format("20%s-%s-%s %s:%s:%s", year, month, day, hour, minute, second);  //不处理毫秒
-				
 				ConstModel.bGNSSTime = true;
-				
 				if(ConstModel.LOGDEBUG){
 					Log.i(ConstModel.TAG, "SystemSelfCheck_TAG_rmc gnssTime---" + ConstModel.sGNSSTime);
 				}
-				
 				String strLocalTime = UTC2LocalTime(ConstModel.sGNSSTime);           //将UTC时间转换为本地时间来设置系统时间以及存储到txt中。
-				
 				writeFile(strLocalTime);               //存储本地时间到本地txt，作为下一次使用
-				
-//②在此处设置系统时间      ///////////////////////////////////////////////////////////////////////////////////////////////GNSS时间
+				// ②在此处设置系统时间      ///////////////////////////////////////////////////////////////////////////////////////////////GNSS时间
 				//setSystemTime(Integer.parseInt(year20), Integer.parseInt(month), Integer.parseInt(day), Integer.parseInt(hour), Integer.parseInt(minute), Integer.parseInt(second));
 				setSystemTime(strLocalTime);
-				///////////////////////////////////////////////////////////////////////////////////////////////
 			}
-			
 			break;
 		}
-
+		case DataBaseInterface.TYPE_GGA:
+		{
+			GGAData data = (GGAData) obj;
+			oneTag = data.protoSentence+"\n";
+		}
+			break;
 		default:
-
 			break;
 		}
+		oneTag = String.format("%s\n",obj.toString());
+		Intent ds_intent = new Intent();
+		ds_intent.setAction(bdSerialReciveData);
+		ds_intent.putExtra("data",oneTag.getBytes());
+		sendBroadcast(ds_intent);
 
 		return 0;
 	}
@@ -469,10 +467,22 @@ public class SystemRebootService extends Service implements pyDataComFromJni,OnC
 		//收到的串口数据
 		//logData(data, len);
 		android.util.Log.i("SELFCHECK", String.format("Rev from fd=%d(%d):%s\n",fd,len,serial.byteToString(data)));
+		if(data != null)
+			mJniDataPraseMode.ProcssData(data,data.length);
+		//下面先发广播数据，以后调好拼包解析代码则可以去掉
+		/*
 		Intent ds_intent = new Intent();
 		ds_intent.setAction(bdSerialReciveData);
 		ds_intent.putExtra("data",data);
 		sendBroadcast(ds_intent);
+		*/
+	}
+
+	public void runReboot() {
+		//首先要关闭程序提供的服务,以免关机时程序还需要写入数据,导致存属区损坏
+		Intent intent = new Intent();
+		intent.setAction("com.androidex.action.reboot");
+		sendBroadcast(intent);
 	}
 
 	public class NotifyReceiver extends BroadcastReceiver {
@@ -492,6 +502,8 @@ public class SystemRebootService extends Service implements pyDataComFromJni,OnC
 				//logData(data,data.length);
 				if(mGnssFd > 0)
 					serial.serial_write(mGnssFd,data,data.length);
+			}else if(intent.getAction().equals(actionRunReboot)){
+				runReboot();
 			}
 		}
 	}
