@@ -10,4 +10,5 @@ public class GSAData {
 	public double   dPDOP;               //PDOP值
 	public double   dTDOP;               //TDOP值
 	
+	public String protoSentence;			//Ð­Òé°ü
 }

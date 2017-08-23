@@ -10,4 +10,5 @@ public class VTGData {
 	public double    dSpeed2;                      //对地速度
 	public char      cSpeed2Uint;                  //对地速度单位：km/h
 	public char      cModeType;                    //模式指示器
+	public String protoSentence;			//协议包
 }

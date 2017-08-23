@@ -21,10 +21,11 @@
         android:id="@+id/textView1"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_alignRight="@+id/textView1"
-        android:layout_below="@+id/textView1"
         android:text="@string/detail"
-        android:textSize="20dp" />
+        android:textSize="20dp"
+        android:layout_alignParentStart="true"
+        android:layout_alignParentEnd="true"
+        android:layout_alignParentTop="true" />
 
     <TextView
         android:id="@+id/StableOSVerion"

@@ -99,12 +99,12 @@ public class kkserial {
         return native_serial_read(fd,length,timeout);
 	}
 
-    public int serial_readloop(final int fd, final int length,final int usec){
+    public int serial_readloop(final String port, final int length,final int usec){
         Runnable run=new Runnable() {
             public void run() {
-                OnLogEvent(fd,"开始读取串口数据");
-                native_serial_readloop(fd,length,usec);
-                OnLogEvent(fd,"读取结束");
+                //OnLogEvent(0,"开始读取串口数据");
+                native_serial_readloop(port,length,usec);
+                //OnLogEvent(0,"读取结束");
             }
         };
         Thread pthread = new Thread(run);
@@ -139,5 +139,5 @@ public class kkserial {
 	public native int       native_serial_write(int fd,byte[] data,int size);
     public native String    native_serial_readHex(int fd,int length,int timeout);
     public native int       native_serial_writeHex(int fd,String data);
-    public native int       native_serial_readloop(int fd,int length,int usec);
+    public native int       native_serial_readloop(String port,int length,int usec);
 }

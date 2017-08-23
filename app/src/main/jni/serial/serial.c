@@ -95,46 +95,94 @@ int kkserial_select(HKKP env,HKKP obj,int fd,int usec)
 	return r;
 }
 
-
+#define FIFOCMD     "/data/readloop%d"
 /**
  * 打开，返回0失败   其他成功
  * @kkueventram arg 参数字符串
  */
-int kkserial_readloop(HKKP env,HKKP obj,int fd,int len,int usec)
+int kkserial_readloop(HKKP env,HKKP obj,char *port,int len,int usec)
 {
 	char data[1024];
+    char rdCmd[50];
 	int	res,loop = 1;
 	int revLen = len > 1023 ? 1023 : len-1;
+    int fd = 0,cmdFd = 0,maxFd = 0;
 
-	kkserial_event(env,obj,fd,"KKSERIAL read:fd=%d,length=%d\n", fd,len);
-	while(loop)
+    kkserial_event(env,obj,fd,"KKSERIAL read:fd=%d,length=%d\n", fd,len);
+    while(loop)
 	{
 		int iret = 0;
 		fd_set rfds;
 
-		FD_CLR(fd,&rfds);
+        if(fd <= 0){
+            kkserial_event(env,obj,0,"try to open %s for read...",port);
+            fd = kkserial_open(env,obj,port);
+            if(fd <= 0){
+                kkserial_event(env,obj,fd,"fail to open %s to read.",port);
+            }else{
+                kkserial_event(env,obj,fd,"open %s success fd=%d",port,fd);
+                if(cmdFd <= 0){
+                    /*
+                    memset(rdCmd,0,sizeof(rdCmd));
+                    sprintf(rdCmd,FIFOCMD,fd);
+                    if (access(rdCmd, 0) != 0) {
+                        if ((mkfifo(rdCmd, 0777)) == -1) {
+                            kkserial_event(env,obj,0,"mkfifo %s error!",rdCmd);
+                        }
+                    } else {
+                        kkserial_event(env,obj,cmdFd,"%s file exits,use it.",rdCmd);
+                    }
+                    kkserial_event(env,obj,0,"try to open %s for read...",rdCmd);
+                    cmdFd = open(rdCmd,O_RDONLY | O_NONBLOCK);
+                    if(cmdFd <= 0){
+                        kkserial_event(env,obj,cmdFd,"fail to open %s to read.",rdCmd);
+                    }else{
+                        kkserial_event(env,obj,cmdFd,"open %s success cmdFd=%d",rdCmd,cmdFd);
+                    }
+                    */
+                }
+            }
+        }
+
+		if(fd > 0)
+            FD_CLR(fd,&rfds);
+        if(cmdFd > 0)
+            FD_CLR(cmdFd,&rfds);
 		FD_ZERO(&rfds);
-		FD_SET(fd, &rfds);
+        if(fd > 0)
+            FD_SET(fd,&rfds);
+        if(cmdFd > 0)
+            FD_SET(cmdFd,&rfds);
+        maxFd = fd > cmdFd ? fd : cmdFd;
+        maxFd++;
         //kkserial_event(env,obj,fd,"Start select ...");
 		if(usec == -1){
-			iret = select(fd + 1, &rfds, NULL, NULL, NULL);
+			iret = select(maxFd, &rfds, NULL, NULL, NULL);
 		}else{
 			struct timeval tv;
 			memset(&tv,0,sizeof(tv));
 
 			tv.tv_sec = usec/1000000;
 			tv.tv_usec = usec%1000000;//1000000us = 1s
-			iret = select(fd + 1,&rfds,NULL,NULL,&tv);
+			iret = select(maxFd,&rfds,NULL,NULL,&tv);
 		}
         //kkserial_event(env,obj,fd,"   select ret=%d",iret);
 		if(iret < 0){
 			//发生错误
 			kkserial_event(env,obj,fd,"KKSERIAL select error: %s", strerror(errno));
 			tcflush(fd, TCIOFLUSH);
-			loop = 0;		//退出循环
+            kkserial_close(env,obj,fd);
+            if(cmdFd > 0)close(cmdFd);
+			//loop = 0;		//退出循环
+            fd = -1;
+            cmdFd = -1;
 		}else if(iret == 0){
 			//等待超时
 			kkserial_event(env,obj,fd,"KKSERIAL select timeout");
+            kkserial_close(env,obj,fd);
+            if(cmdFd > 0)close(cmdFd);
+            fd = 0;
+            cmdFd = 0;
 		}else{
 			if(FD_ISSET(fd, &rfds)){
 				memset(data,0,1024);
@@ -150,8 +198,14 @@ int kkserial_readloop(HKKP env,HKKP obj,int fd,int len,int usec)
 					jni_data_recive_event(env,obj,fd,data,res);
                     //kkserial_event(env,obj,fd,"Recive from %d:%d:%s",fd,res,data);
 				}
-			}else{
-                kkserial_event(env,obj,fd,"No fd_isset");
+			}if(FD_ISSET(cmdFd, &rfds)){
+                memset(data,0,1024);
+                res = read(cmdFd,data,revLen);
+                if(res > 0){
+                    //收到命令数据，可以用命令结束读取数据的循环
+                }
+            }else{
+                //kkserial_event(env,obj,fd,"No fd_isset");
             }
 		}
 	}

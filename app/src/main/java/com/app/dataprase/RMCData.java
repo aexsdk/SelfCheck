@@ -25,4 +25,5 @@ public class RMCData {
 
 	public double Latitude;						//纬度度表示
 	public double Logitude;						//经度度表示
+	public String protoSentence;
 }

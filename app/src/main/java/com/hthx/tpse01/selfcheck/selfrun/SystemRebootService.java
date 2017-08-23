@@ -12,6 +12,8 @@ import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.TimeZone;
+import java.util.Timer;
+import java.util.TimerTask;
 
 import com.androidex.plugins.OnCallback;
 import com.androidex.plugins.kkserial;
@@ -50,6 +52,8 @@ public class SystemRebootService extends Service implements pyDataComFromJni,OnC
 	private NotifyReceiver mReceiver;
 	public kkserial serial;
 	public int mGnssFd = 0;
+	private Timer rebootTimer;
+	private RebootTimerTask rebootTask;
 
 	@Override
 	public IBinder onBind(Intent arg0) {
@@ -68,10 +72,6 @@ public class SystemRebootService extends Service implements pyDataComFromJni,OnC
 		if(!new File("StoreLocalTime.txt").exists()){
 			writeFile("2017-08-25 14:10:18");
 		}
-
-		AlarmManager am = (AlarmManager) getApplicationContext().getSystemService(Context.ALARM_SERVICE);
-        am.set(ELAPSED_REALTIME_WAKEUP, System.currentTimeMillis() + 480000,   //从现在起30s
-                PendingIntent.getBroadcast(getApplicationContext(), 100, new Intent(actionRunReboot), PendingIntent.FLAG_UPDATE_CURRENT));
 
 		/////////////////////////////////////////////////////////初始化协议数据解析模块(jni模块)
 		mReceiver = new NotifyReceiver();
@@ -116,6 +116,17 @@ public class SystemRebootService extends Service implements pyDataComFromJni,OnC
 		startService(intentMXC3);
 		gnss_runnable();
 		*/
+		serial.serial_readloop(mBDPort,100,10*1000000);
+		run28app("com.androidex.apps.aexserial", "com.androidex.apps.aexserial.MainActivity");
+
+		/*
+		AlarmManager am = (AlarmManager) getApplicationContext().getSystemService(Context.ALARM_SERVICE);
+		am.set(ELAPSED_REALTIME_WAKEUP, System.currentTimeMillis() + 480000,   //从现在起30s
+				PendingIntent.getBroadcast(getApplicationContext(), 100, new Intent(actionRunReboot), PendingIntent.FLAG_UPDATE_CURRENT));
+		*/
+		rebootTimer = new Timer();
+		rebootTask = new RebootTimerTask();
+		rebootTimer.schedule(rebootTask,60000);
 	}
 
 	public String CheckGsmCommand(int lGsmFd,String cmd) {
@@ -262,12 +273,6 @@ public class SystemRebootService extends Service implements pyDataComFromJni,OnC
 
 	@Override
 	public int onStartCommand(Intent intent, int flags, int startId){
-		mGnssFd = serial.serial_open(mBDPort);
-		if(mGnssFd > 0) {
-			serial.serial_readloop(mGnssFd,100,-1);
-			run28app("com.androidex.apps.aexserial", "com.androidex.apps.aexserial.MainActivity");
-		}
-
 		return START_STICKY;
 	}
 	
@@ -344,6 +349,7 @@ public class SystemRebootService extends Service implements pyDataComFromJni,OnC
 		oneTag = String.format("%s\n",obj.toString());
 		Intent ds_intent = new Intent();
 		ds_intent.setAction(bdSerialReciveData);
+		ds_intent.putExtra("fd",mGnssFd);
 		ds_intent.putExtra("data",oneTag.getBytes());
 		sendBroadcast(ds_intent);
 
@@ -458,6 +464,7 @@ public class SystemRebootService extends Service implements pyDataComFromJni,OnC
 		android.util.Log.i("SELFCHECK", String.format("OnLogEvent: fd=%d,msg=%s\n",fd,msg));
 		Intent ds_intent = new Intent();
 		ds_intent.setAction(bdSerialReciveLog);
+		ds_intent.putExtra("fd",mGnssFd);
 		ds_intent.putExtra("data",msg);
 		sendBroadcast(ds_intent);
 	}
@@ -480,6 +487,7 @@ public class SystemRebootService extends Service implements pyDataComFromJni,OnC
 
 	public void runReboot() {
 		//首先要关闭程序提供的服务,以免关机时程序还需要写入数据,导致存属区损坏
+		onLogEvent(0,"Will reboot now.");
 		Intent intent = new Intent();
 		intent.setAction("com.androidex.action.reboot");
 		sendBroadcast(intent);
@@ -508,4 +516,12 @@ public class SystemRebootService extends Service implements pyDataComFromJni,OnC
 		}
 	}
 
+	public class RebootTimerTask  extends TimerTask{
+		@Override
+		public void run() {
+			Intent ds_intent = new Intent();
+			ds_intent.setAction(actionRunReboot);
+			sendBroadcast(ds_intent);
+		}
+	}
 }

@@ -19,6 +19,8 @@
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
+                <category android:name="android.intent.category.HOME"/>
+                <category android:name="android.intent.category.DEFAULT"/>
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
@@ -36,5 +38,11 @@
 
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
     <uses-permission android:name="android.permission.SET_TIME" />
+    <uses-permission
+        android:name="android.permission.REBOOT"
+        android:protectionLevel="signatureOrSystem"/>
+    <uses-permission
+        android:name="android.permission.SHUTDOWN"
+        android:protectionLevel="signatureOrSystem"/>
 
 </manifest>

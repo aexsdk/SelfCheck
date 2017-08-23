@@ -233,9 +233,15 @@ JNIEXPORT jint JNICALL Java_com_androidex_plugins_kkserial_native_1serial_1write
 }
 
 JNIEXPORT int JNICALL Java_com_androidex_plugins_kkserial_native_1serial_1readloop
-        (JNIEnv *env, jobject this, jint fd, jint length,jint usec)
+        (JNIEnv *env, jobject this, jstring strarg, jint length,jint usec)
 {
+    int r = 0;
     if(length <= 0 || length > MAX_READLEN)
         length = MAX_READLEN;
-    return kkserial_readloop(env,this,fd, length,usec);
+    char *charg = (char *)(*env)->GetStringUTFChars(env, strarg, 0);
+
+    __android_log_print(0,tag, "%s:%s", __func__,charg);
+    r = kkserial_readloop(env,this,charg,length,usec);
+    (*env)->ReleaseStringUTFChars(env, strarg, charg);
+    return r;
 }

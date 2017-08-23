@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-    <string name="app_name">SystemSelfCheck</string>
-    <string name="action_settings">Settings</string>
+    <string name="app_name">系统自检</string>
+    <string name="action_settings">设置</string>
     <string name="content">系统自检</string>
     <string name="detail">警告：系统自检程序，请勿删除，谢谢！</string>
 

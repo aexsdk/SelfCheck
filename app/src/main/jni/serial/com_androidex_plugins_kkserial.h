@@ -69,7 +69,7 @@ JNIEXPORT jint JNICALL Java_com_androidex_plugins_kkserial_native_1serial_1write
   (JNIEnv *, jobject, jint, jstring);
 
 JNIEXPORT int JNICALL Java_com_androidex_plugins_kkserial_native_1serial_1readloop
-        (JNIEnv *env, jobject this, jint fd, jint length,jint usec);
+        (JNIEnv *env, jobject this, jstring strarg, jint length,jint usec);
 
 
 #ifdef __cplusplus

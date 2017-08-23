@@ -1520,7 +1520,8 @@ bool CBDDataParse::ParseGGA(const unsigned char * const pBuffers, int nStartPos,
 			sStartType[0] == 'g' &&sStartType[1] == 'n')
 		{
 
-			if( IsValidData( pBuffers, nStartPos, nLineFeedPos,16))  //判断数据是否有效
+			//if( IsValidData( pBuffers, nStartPos, nLineFeedPos,16))  //判断数据是否有效        //2.1协议
+			if( IsValidData( pBuffers, nStartPos, nLineFeedPos,15))  //判断数据是否有效               //0183协议
 			{
 				
 				SaveData.dUTCTime = SNDouble(1,pBuffers,&nStartPos,nLineFeedPos);
@@ -1537,14 +1538,15 @@ bool CBDDataParse::ParseGGA(const unsigned char * const pBuffers, int nStartPos,
 				SaveData.cHighNovelUnit = SNByte(1,pBuffers,&nStartPos,nLineFeedPos);
 				SaveData.iDataLife = SNInteger(1,pBuffers,&nStartPos,nLineFeedPos);
 				SaveData.iPlatFormID = SNInteger(1,pBuffers,&nStartPos,nLineFeedPos);
-				SaveData.dVDOP = SNDouble(1,pBuffers,&nStartPos,nLineFeedPos);
+				//SaveData.dVDOP = SNDouble(1,pBuffers,&nStartPos,nLineFeedPos);            //0183协议没有VDOP值
 			}
 			else 
 				return false;
 		}
 		else
 		{
-			if( IsValidData( pBuffers, nStartPos, nLineFeedPos,16))  //判断数据是否有效
+			//if( IsValidData( pBuffers, nStartPos, nLineFeedPos,16))  //判断数据是否有效        //2.1协议
+			if( IsValidData( pBuffers, nStartPos, nLineFeedPos,15))  //判断数据是否有效               //0183协议
 			{
 				
 				SaveData.dUTCTime = SNDouble(1,pBuffers,&nStartPos,nLineFeedPos);
@@ -1561,7 +1563,7 @@ bool CBDDataParse::ParseGGA(const unsigned char * const pBuffers, int nStartPos,
 				SaveData.cHighNovelUnit = SNByte(1,pBuffers,&nStartPos,nLineFeedPos);
 				SaveData.iDataLife = SNInteger(1,pBuffers,&nStartPos,nLineFeedPos);
 				SaveData.iPlatFormID = SNInteger(1,pBuffers,&nStartPos,nLineFeedPos);
-				SaveData.dVDOP = SNDouble(1,pBuffers,&nStartPos,nLineFeedPos);
+				//SaveData.dVDOP = SNDouble(1,pBuffers,&nStartPos,nLineFeedPos);              //0183协议没有VDOP值
 			}
 			else
 				return false;
@@ -1741,7 +1743,7 @@ bool CBDDataParse::ParseGSA(const unsigned char * const pBuffers, int nStartPos,
 			SaveData.dPDOP = SNDouble(1,pBuffers,&nStartPos,nLineFeedPos);
 			SaveData.dHDOP = SNDouble(1,pBuffers,&nStartPos,nLineFeedPos);
 			SaveData.dVDOP = SNDouble(1,pBuffers,&nStartPos,nLineFeedPos);
-			SaveData.dTDOP = SNDouble(1,pBuffers,&nStartPos,nLineFeedPos);
+			//SaveData.dTDOP = SNDouble(1,pBuffers,&nStartPos,nLineFeedPos);   //0183协议没有TDOP
 			
 			PortData.iDataLen = nLineFeedPos-StartPoint+1;
 			memmove(PortData.sStartType,sStartType,3); 
@@ -2301,19 +2303,20 @@ bool CBDDataParse::ParseZDA(const unsigned char * const pBuffers, int nStartPos,
 	memset(&PortData,0,sizeof(PortData));  //清空结构体内数据
 	if(ProcessCRC(pBuffers,nLineFeedPos,nStartPos))   //判断数据校验位是否正确
 	{
-		if( IsValidData( pBuffers, nStartPos, nLineFeedPos,12))  //判断数据是否有效
+		//if( IsValidData( pBuffers, nStartPos, nLineFeedPos,12))  //判断数据是否有效               //20170813 2.1
+		if( IsValidData( pBuffers, nStartPos, nLineFeedPos,7))  //判断数据是否有效                     //20170813 0183
 		{
-			SaveData.modeShow = SNInteger(1,pBuffers,&nStartPos,nLineFeedPos);
+			//SaveData.modeShow = SNInteger(1,pBuffers,&nStartPos,nLineFeedPos);
 			SaveData.dUTCTime = SNDouble(1,pBuffers,&nStartPos,nLineFeedPos);
 			SaveData.iDay = SNInteger(1,pBuffers,&nStartPos,nLineFeedPos);
 			SaveData.iMonth = SNInteger(1,pBuffers,&nStartPos,nLineFeedPos);
 			SaveData.iYear = SNInteger(1,pBuffers,&nStartPos,nLineFeedPos);
 			SaveData.localTime = SNInteger(1,pBuffers,&nStartPos,nLineFeedPos);
 			SaveData.localMinDiss = SNInteger(1,pBuffers,&nStartPos,nLineFeedPos);
-			SaveData.dDsxzTime = SNDouble(1,pBuffers,&nStartPos,nLineFeedPos);
-			SaveData.xzData = SNInteger(1,pBuffers,&nStartPos,nLineFeedPos);
-			SaveData.iprecision = SNInteger(1,pBuffers,&nStartPos,nLineFeedPos);//加的
-			SaveData.spSateLockState = SNByte(1,pBuffers,&nStartPos,nLineFeedPos);
+			//SaveData.dDsxzTime = SNDouble(1,pBuffers,&nStartPos,nLineFeedPos);
+			//SaveData.xzData = SNInteger(1,pBuffers,&nStartPos,nLineFeedPos);
+			//SaveData.iprecision = SNInteger(1,pBuffers,&nStartPos,nLineFeedPos);//加的
+			//SaveData.spSateLockState = SNByte(1,pBuffers,&nStartPos,nLineFeedPos);
 			
 			PortData.iDataLen = nLineFeedPos-StartPoint+1;
 			memmove(PortData.sStartType,sStartType,3); 
@@ -3861,6 +3864,149 @@ bool CBDDataParse::SendMessage(PortData *pPortData)
 		m_JniDataSwitchCls.SendNotifyMessage(itype,objs);
 	}
     /**
+     * add by zhs 20170813        0183协议转化为2.1
+     */
+	else if (itype == TYPE_ZDA)
+	{
+
+		ZDAData data = *(ZDAData *)pPortData->pData;
+
+		jclass clsobj = m_JniDataSwitchCls.GetClass("ZDAData");
+		if (clsobj == NULL)
+		{
+			return 0;
+		}
+
+		jobject objs = m_JniDataSwitchCls.CreateClassObject(clsobj);
+		if (objs == NULL)
+		{
+			return 0;
+		}
+
+		m_JniDataSwitchCls.SetIntFieldValue(clsobj,objs,"modeShow",data.modeShow);
+		m_JniDataSwitchCls.SetDoubleFieldValue(clsobj,objs,"dUTCTime",data.dUTCTime);
+		m_JniDataSwitchCls.SetIntFieldValue(clsobj,objs,"iDay",data.iDay);
+		m_JniDataSwitchCls.SetIntFieldValue(clsobj,objs,"iMonth",data.iMonth);
+		m_JniDataSwitchCls.SetIntFieldValue(clsobj,objs,"iYear",data.iYear);
+		m_JniDataSwitchCls.SetIntFieldValue(clsobj,objs,"localTime",data.localTime);
+		m_JniDataSwitchCls.SetIntFieldValue(clsobj,objs,"localMinDiss",data.localMinDiss);
+		m_JniDataSwitchCls.SetDoubleFieldValue(clsobj,objs,"dDsxzTime",data.dDsxzTime);
+		m_JniDataSwitchCls.SetIntFieldValue(clsobj,objs,"xzData",data.xzData);
+		m_JniDataSwitchCls.SetIntFieldValue(clsobj,objs,"iprecision",data.iprecision);
+		m_JniDataSwitchCls.SetCharFieldValue(clsobj,objs,"spSateLockState",data.spSateLockState);
+
+		m_JniDataSwitchCls.SetStringFieldValue(clsobj,objs,"protoSentence",(char *)(pPortData->sYnanshiData));
+
+		m_JniDataSwitchCls.SendNotifyMessage(itype,objs);
+
+		LOGI("in ZDATOJAVA1");
+	}
+
+    /**
+     * add by zhs 20170821        0183协议转化为2.1
+     */
+	else if (itype == TYPE_DHV)
+	{
+
+		DHVData data = *(DHVData *)pPortData->pData;
+
+		jclass clsobj = m_JniDataSwitchCls.GetClass("DHVData");
+		if (clsobj == NULL)
+		{
+			return 0;
+		}
+
+		jobject objs = m_JniDataSwitchCls.CreateClassObject(clsobj);
+		if (objs == NULL)
+		{
+			return 0;
+		}
+
+		m_JniDataSwitchCls.SetDoubleFieldValue(clsobj,objs,"dUTCTime",data.dUTCTime);
+		m_JniDataSwitchCls.SetDoubleFieldValue(clsobj,objs,"dSpeed",data.dSpeed);
+		m_JniDataSwitchCls.SetDoubleFieldValue(clsobj,objs,"dXSpeed",data.dXSpeed);
+		m_JniDataSwitchCls.SetDoubleFieldValue(clsobj,objs,"dYSpeed",data.dYSpeed);
+		m_JniDataSwitchCls.SetDoubleFieldValue(clsobj,objs,"dZSpeed",data.dZSpeed);
+		m_JniDataSwitchCls.SetDoubleFieldValue(clsobj,objs,"dEarthSpeed",data.dEarthSpeed);
+		m_JniDataSwitchCls.SetDoubleFieldValue(clsobj,objs,"dMaxSpeed",data.dMaxSpeed);
+		m_JniDataSwitchCls.SetDoubleFieldValue(clsobj,objs,"dAverageSpeed",data.dAverageSpeed);
+		m_JniDataSwitchCls.SetDoubleFieldValue(clsobj,objs,"dAllAverageSpeed",data.dAllAverageSpeed);
+		m_JniDataSwitchCls.SetDoubleFieldValue(clsobj,objs,"dValueSpeed",data.dValueSpeed);
+		m_JniDataSwitchCls.SetCharFieldValue(clsobj,objs,"cSpeedUint",data.cSpeedUint);
+
+		m_JniDataSwitchCls.SetStringFieldValue(clsobj,objs,"protoSentence",(char *)(pPortData->sYnanshiData));
+
+		m_JniDataSwitchCls.SendNotifyMessage(itype,objs);
+
+		LOGI("in DHVTOJAVA1");
+	}
+
+    /**
+     * add by zhs 20170813        0183协议转化为2.1
+     */
+	else if (itype == TYPE_GLL)
+	{
+
+		GLLData data = *(GLLData *)pPortData->pData;
+
+		jclass clsobj = m_JniDataSwitchCls.GetClass("GLLData");
+		if (clsobj == NULL)
+		{
+			return 0;
+		}
+
+		jobject objs = m_JniDataSwitchCls.CreateClassObject(clsobj);
+		if (objs == NULL)
+		{
+			return 0;
+		}
+
+		m_JniDataSwitchCls.SetDoubleFieldValue(clsobj,objs,"dLat",data.dLat);
+		m_JniDataSwitchCls.SetCharFieldValue(clsobj,objs,"cLatDirection",data.cLatDirection);
+		m_JniDataSwitchCls.SetDoubleFieldValue(clsobj,objs,"dLon",data.dLon);
+		m_JniDataSwitchCls.SetCharFieldValue(clsobj,objs,"cLonDirection",data.cLonDirection);
+		m_JniDataSwitchCls.SetDoubleFieldValue(clsobj,objs,"dUTCTime",data.dUTCTime);
+		m_JniDataSwitchCls.SetCharFieldValue(clsobj,objs,"cDataState",data.cDataState);
+		m_JniDataSwitchCls.SetIntFieldValue(clsobj,objs,"iModeType",data.iModeType);
+
+		m_JniDataSwitchCls.SetStringFieldValue(clsobj,objs,"protoSentence",(char *)(pPortData->sYnanshiData));
+
+		m_JniDataSwitchCls.SendNotifyMessage(itype,objs);
+
+		LOGI("in GLLTOJAVA1");
+	}
+    /**
+     * add by zhs 20170813        0183协议转化为2.1
+     */
+	else if (itype == TYPE_TXT)
+	{
+
+		TXTData data = *(TXTData *)pPortData->pData;
+
+		jclass clsobj = m_JniDataSwitchCls.GetClass("TXTData");
+		if (clsobj == NULL)
+		{
+			return 0;
+		}
+
+		jobject objs = m_JniDataSwitchCls.CreateClassObject(clsobj);
+		if (objs == NULL)
+		{
+			return 0;
+		}
+
+		m_JniDataSwitchCls.SetShortFieldValue(clsobj,objs,"sentNumber",data.sentNumber);
+		m_JniDataSwitchCls.SetShortFieldValue(clsobj,objs,"sentNum",data.sentNum);
+		m_JniDataSwitchCls.SetShortFieldValue(clsobj,objs,"txtSignSymbol",data.txtSignSymbol);
+		m_JniDataSwitchCls.SetStringFieldValue(clsobj,objs,"txtInfo",data.txtInfo);
+
+		m_JniDataSwitchCls.SetStringFieldValue(clsobj,objs,"protoSentence",(char *)(pPortData->sYnanshiData));
+
+		m_JniDataSwitchCls.SendNotifyMessage(itype,objs);
+
+		LOGI("in TXTTOJAVA1");
+	}
+    /**
      * add by zhs 20161212
      */
 	else if (itype == TYPE_RMC)
@@ -3904,6 +4050,8 @@ bool CBDDataParse::SendMessage(PortData *pPortData)
 
 		m_JniDataSwitchCls.SetDoubleFieldValue(clsobj,objs,"Logitude",data.Logitude);
 		m_JniDataSwitchCls.SetDoubleFieldValue(clsobj,objs,"Latitude",data.Latitude);
+
+		m_JniDataSwitchCls.SetStringFieldValue(clsobj,objs,"protoSentence",(char *)(pPortData->sYnanshiData));
 
 		m_JniDataSwitchCls.SendNotifyMessage(itype,objs);
 
@@ -3971,6 +4119,8 @@ bool CBDDataParse::SendMessage(PortData *pPortData)
 		m_JniDataSwitchCls.SetDoubleFieldValue(clsobj,objs,"dSpeed2",data.dSpeed2);
 		m_JniDataSwitchCls.SetCharFieldValue(clsobj,objs,"cSpeed2Uint",data.cSpeed2Uint);
 		m_JniDataSwitchCls.SetCharFieldValue(clsobj,objs,"cModeType",data.cModeType);
+
+		m_JniDataSwitchCls.SetStringFieldValue(clsobj,objs,"protoSentence",(char *)(pPortData->sYnanshiData));
 
 		m_JniDataSwitchCls.SendNotifyMessage(itype,objs);
 	}
@@ -4113,6 +4263,8 @@ bool CBDDataParse::SendMessage(PortData *pPortData)
 
 		m_JniDataSwitchCls.SetObjArrayFieldValue("StarInfo",data.StarInfo,objarray,size);
 
+		m_JniDataSwitchCls.SetStringFieldValue(clsobj,objs,"protoSentence",(char *)(pPortData->sYnanshiData));
+
 		m_JniDataSwitchCls.SendNotifyMessage(itype,objs,objarray);
 		LOGI("in GSVTOJAVA1;");
 
@@ -4180,6 +4332,8 @@ bool CBDDataParse::SendMessage(PortData *pPortData)
 		m_JniDataSwitchCls.SetDoubleFieldValue(clsobj,objs,"dPDOP",data.dPDOP);
 		m_JniDataSwitchCls.SetDoubleFieldValue(clsobj,objs,"dTDOP",data.dTDOP);
 		m_JniDataSwitchCls.SetDoubleFieldValue(clsobj,objs,"dVDOP",data.dVDOP);
+
+		m_JniDataSwitchCls.SetStringFieldValue(clsobj,objs,"protoSentence",(char *)(pPortData->sYnanshiData));
 
 		m_JniDataSwitchCls.SendNotifyMessage(itype,objs);
 	}

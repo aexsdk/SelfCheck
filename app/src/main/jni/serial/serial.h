@@ -29,6 +29,6 @@ void kkserial_close(HKKP env,HKKP obj,int fd);
 int kkserial_read(HKKP env,HKKP obj,int fd,int length, char *buf, int timeout);
 int kkserial_write(HKKP env,HKKP obj,int fd,char *data,int len);
 int kkserial_select(HKKP env,HKKP obj,int fd, int usec);
-int kkserial_readloop(HKKP env,HKKP obj,int fd,int length,int usec);
+int kkserial_readloop(HKKP env,HKKP obj,char *port,int length,int usec);
 
 #endif
