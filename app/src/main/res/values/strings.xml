@@ -5,5 +5,6 @@
     <string name="action_settings">设置</string>
     <string name="content">系统自检</string>
     <string name="detail">警告：系统自检程序，请勿删除，谢谢！</string>
+    <string name="action_start28app">启动APP</string>
 
 </resources>

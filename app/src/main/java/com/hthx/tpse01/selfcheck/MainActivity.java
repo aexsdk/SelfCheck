@@ -10,7 +10,9 @@ import android.app.Activity;
 import android.os.RemoteException;
 import android.os.UserHandle;
 import android.view.Menu;
+import android.view.MenuItem;
 import android.view.View;
+import android.view.ViewGroup;
 import android.view.WindowManager;
 import android.widget.EditText;
 import android.widget.TextView;
@@ -60,6 +62,9 @@ public class MainActivity extends Activity {
 		if(mFd > 0)
 			serial.serial_readloop(mFd,100);
 		*/
+		Intent intent = new Intent();
+		intent.setAction(SystemRebootService.bdStart28App);
+		sendBroadcast(intent);
 	}
 
 	@Override
@@ -67,6 +72,32 @@ public class MainActivity extends Activity {
 		// Inflate the menu; this adds items to the action bar if it is present.
 		getMenuInflater().inflate(R.menu.main, menu);
 		return true;
+	}
+	@Override
+	public boolean onOptionsItemSelected(MenuItem item) {
+		switch (item.getItemId()) {
+			case R.id.action_settings:
+				system_set();//系统设置
+				return true;
+			case R.id.action_start28app: {
+				Intent intent = new Intent();
+				intent.setAction(SystemRebootService.bdStart28App);
+				sendBroadcast(intent);
+				return true;
+			}
+		}
+		return super.onOptionsItemSelected(item);
+	}
+
+	/**
+	 * 系统设置
+	 */
+	private void system_set() {
+		Intent mIntent = new Intent();
+		mIntent.setAction(Intent.ACTION_VIEW);
+		mIntent.setClassName("com.android.settings", "com.android.settings.Settings");
+		mIntent.putExtra("back", true);
+		startActivity(mIntent);
 	}
 
 }

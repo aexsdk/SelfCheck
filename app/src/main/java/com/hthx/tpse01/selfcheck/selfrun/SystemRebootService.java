@@ -49,6 +49,7 @@ public class SystemRebootService extends Service implements pyDataComFromJni,OnC
 	public static final String bdSerialReciveData        = "bd.serial.recivedata";
 	public static final String bdSerialReciveLog         = "bd.serial.recivelog";
 	public static final String bdSerialSendData         = "bd.serial.senddata";
+	public static final String bdStart28App				= "bd.serial.startapp";
 	private NotifyReceiver mReceiver;
 	public kkserial serial;
 	public int mGnssFd = 0;
@@ -79,6 +80,7 @@ public class SystemRebootService extends Service implements pyDataComFromJni,OnC
 		filter.addAction(bdSerialReciveData);
 		filter.addAction(bdSerialReciveLog);
 		filter.addAction(actionRunReboot);
+		filter.addAction(bdStart28App);
 		registerReceiver(mReceiver, filter);
 
 		/////////////////////////////////////////////////////////检测TF卡状态、获取系统信息
@@ -117,16 +119,17 @@ public class SystemRebootService extends Service implements pyDataComFromJni,OnC
 		gnss_runnable();
 		*/
 		serial.serial_readloop(mBDPort,100,10*1000000);
-		run28app("com.androidex.apps.aexserial", "com.androidex.apps.aexserial.MainActivity");
 
 		/*
 		AlarmManager am = (AlarmManager) getApplicationContext().getSystemService(Context.ALARM_SERVICE);
 		am.set(ELAPSED_REALTIME_WAKEUP, System.currentTimeMillis() + 480000,   //从现在起30s
 				PendingIntent.getBroadcast(getApplicationContext(), 100, new Intent(actionRunReboot), PendingIntent.FLAG_UPDATE_CURRENT));
 		*/
+
 		rebootTimer = new Timer();
 		rebootTask = new RebootTimerTask();
 		rebootTimer.schedule(rebootTask,60000);
+
 	}
 
 	public String CheckGsmCommand(int lGsmFd,String cmd) {
@@ -207,7 +210,7 @@ public class SystemRebootService extends Service implements pyDataComFromJni,OnC
 		intentTo28App.putExtra("RAM_Size", ConstModel.RAMSize);
 		intentTo28App.putExtra("ROM_Size", ConstModel.ROMSize);
 		intentTo28App.putExtra("OS_Version", ConstModel.OSVersion);
-
+		/*
 		if(ConstModel.LOGDEBUG){
 			Log.e(ConstModel.TAG, "SystemSelfCheck_TAG_GSM-" + ConstModel.GSMState);
 			Log.e(ConstModel.TAG, "SystemSelfCheck_TAG_SIM-" + ConstModel.SIMState);
@@ -218,7 +221,7 @@ public class SystemRebootService extends Service implements pyDataComFromJni,OnC
 			Log.e(ConstModel.TAG, "SystemSelfCheck_TAG_ROM_Size-" + ConstModel.ROMSize);
 			Log.e(ConstModel.TAG, "SystemSelfCheck_TAG_OS_Version-" + ConstModel.OSVersion);
 		}
-
+		*/
 		//ComponentName component = new ComponentName("com.example.testbroadcastintentotherapp2","com.example.testbroadcastintentotherapp2.MainActivity");
 		ComponentName component = new ComponentName(app,mainpage);//"com.example.mywork","com.example.smsproject.Login");
 		//ComponentName component = new ComponentName("com.example.testserialportextenal","com.example.testserialportextenal.MainActivity");
@@ -292,10 +295,11 @@ public class SystemRebootService extends Service implements pyDataComFromJni,OnC
 		switch (iType) {
 		case com.app.dataprase.DataBaseInterface.TYPE_RMC: 
 		{
-			ConstModel.bGNSSData = true;
+			/*ConstModel.bGNSSData = true;
 			if(ConstModel.LOGDEBUG){
 				Log.i(ConstModel.TAG, "SystemSelfCheck_TAG_in the java_rmc");
 			}
+			*/
 			RMCData data = (RMCData) obj;
 			oneTag = data.toString();
 			if(data.iDate != 0 && data.dUtcTime != 0.0){                         //若协议中无数据，那么就不处理
@@ -326,9 +330,9 @@ public class SystemRebootService extends Service implements pyDataComFromJni,OnC
 				//ConstModel.sGNSSTime = String.format("20%s-%s-%s %s:%s:%s.%s", year, month, day,hour, minute, second, millisecond);
 				ConstModel.sGNSSTime = String.format("20%s-%s-%s %s:%s:%s", year, month, day, hour, minute, second);  //不处理毫秒
 				ConstModel.bGNSSTime = true;
-				if(ConstModel.LOGDEBUG){
+				/*if(ConstModel.LOGDEBUG){
 					Log.i(ConstModel.TAG, "SystemSelfCheck_TAG_rmc gnssTime---" + ConstModel.sGNSSTime);
-				}
+				}*/
 				String strLocalTime = UTC2LocalTime(ConstModel.sGNSSTime);           //将UTC时间转换为本地时间来设置系统时间以及存储到txt中。
 				writeFile(strLocalTime);               //存储本地时间到本地txt，作为下一次使用
 				// ②在此处设置系统时间      ///////////////////////////////////////////////////////////////////////////////////////////////GNSS时间
@@ -374,10 +378,10 @@ public class SystemRebootService extends Service implements pyDataComFromJni,OnC
 				content = new String(buf, 0 ,hasRead);
 			}
 			fis.close();
-			
+			/*
 			if(ConstModel.LOGDEBUG){
 				Log.i(ConstModel.TAG, "SystemSelfCheck_TAG_read StoreLocalTime.txt finish");
-			}
+			}*/
 			
 			return content;
 		} catch (FileNotFoundException e) {
@@ -400,9 +404,9 @@ public class SystemRebootService extends Service implements pyDataComFromJni,OnC
 			ps.print(content);
 			ps.close();
 			
-			if(ConstModel.LOGDEBUG){
+			/*if(ConstModel.LOGDEBUG){
 				Log.i(ConstModel.TAG, "SystemSelfCheck_TAG_write StoreLocalTime.txt finish");
-			}
+			}*/
 			
 		} catch (FileNotFoundException e) {
 			// TODO Auto-generated catch block
@@ -512,6 +516,8 @@ public class SystemRebootService extends Service implements pyDataComFromJni,OnC
 					serial.serial_write(mGnssFd,data,data.length);
 			}else if(intent.getAction().equals(actionRunReboot)){
 				runReboot();
+			}else if(intent.getAction().equals(bdStart28App)){
+				run28app("com.androidex.apps.aexserial", "com.androidex.apps.aexserial.MainActivity");
 			}
 		}
 	}
